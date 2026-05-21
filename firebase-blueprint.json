@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "KnodePackage": {
+      "title": "KnodePackage",
+      "description": "A structured slides package containing slide mappings, speaker scripts, visual prompts, and glossary.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "script": { "type": "string" },
+        "slideCountPreference": { "type": "string" },
+        "audiencePreference": { "type": "string" },
+        "glossary": {
+          "type": "array",
+          "description": "List of key glossary terms and short descriptions"
+        },
+        "objectives": {
+          "type": "array",
+          "description": "List of slides learning objectives"
+        },
+        "slides": {
+          "type": "array",
+          "description": "Structured slide mappings with slideNumber, title, visualPrompt, bulletPoints, and script"
+        },
+        "createdAt": { "type": "string" },
+        "userId": { "type": "string", "description": "The UID of the owning user" },
+        "lang": { "type": "string", "description": "Creation language (en, ta, etc.)" }
+      },
+      "required": ["id", "title", "slides", "userId"]
+    }
+  },
+  "firestore": {
+    "/packages/{packageId}": {
+      "schema": "KnodePackage",
+      "description": "Slide mapping files stored per package and secured for owner-only access"
+    }
+  }
+}

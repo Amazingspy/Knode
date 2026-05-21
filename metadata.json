@@ -1,0 +1,6 @@
+{
+  "name": "Knode",
+  "description": "Ingest script outlines and output structured, slide-by-slide Markdown formatted perfectly as a NotebookLM source.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

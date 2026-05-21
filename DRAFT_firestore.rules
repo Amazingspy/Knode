@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net - Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Security Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper for validating a Knode slide package schema
+    function isValidKnodePackage(data) {
+      return data.id is string &&
+             data.title is string &&
+             data.title.size() <= 200 &&
+             data.userId is string &&
+             data.slides is list;
+    }
+
+    // Packages Collection
+    match /packages/{packageId} {
+      // Create rules
+      allow create: if isSignedIn() &&
+                      isValidId(packageId) &&
+                      isValidKnodePackage(request.resource.data) &&
+                      request.resource.data.userId == request.auth.uid;
+
+      // Read rules - Secure List Query Enforcer (Pillar 8) and individual get
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // Update rules
+      allow update: if isSignedIn() &&
+                      isValidId(packageId) &&
+                      isValidKnodePackage(request.resource.data) &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == request.auth.uid &&
+                      // Ensure immutability of creation fields
+                      request.resource.data.id == resource.data.id;
+
+      // Delete rules
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

@@ -42,6 +42,9 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  // Track if initial library load auto-selection has occurred 
+  const initialLoadDone = React.useRef(false);
+
   // Persist language picker selection
   useEffect(() => {
     localStorage.setItem("knode_lang", language);
@@ -52,7 +55,7 @@ export default function App() {
     if (!firebaseEnabled || !auth) {
       setAuthLoading(false);
       // Fallback localstorage database loading
-      loadLocalLibrary();
+      loadLocalLibrary(true);
       return;
     }
 
@@ -61,6 +64,9 @@ export default function App() {
       setAuthLoading(false);
 
       if (currentUser) {
+        // Reset initial load tracking on user changes
+        initialLoadDone.current = false;
+
         // Subscribe to user specific packages
         const q = query(
           collection(db, "packages"), 
@@ -76,9 +82,10 @@ export default function App() {
           pkgs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setLibrary(pkgs);
           
-          // Auto select first item if present and none active
-          if (pkgs.length > 0 && !activePackageId) {
+          // Auto select first item only on the very first load of packages
+          if (pkgs.length > 0 && !initialLoadDone.current) {
             setActivePackageId(pkgs[0].id);
+            initialLoadDone.current = true;
           }
         }, (error) => {
           handleFirestoreError(error, OperationType.GET, "packages");
@@ -87,21 +94,21 @@ export default function App() {
         return () => unsubscribeFirestore();
       } else {
         // User logged out, load local storage database
-        loadLocalLibrary();
+        loadLocalLibrary(true);
       }
     });
 
     return () => unsubscribeAuth();
-  }, [activePackageId]);
+  }, []);
 
-  const loadLocalLibrary = () => {
+  const loadLocalLibrary = (forceAutoSelect = false) => {
     try {
       const stored = localStorage.getItem("knode_library");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           setLibrary(parsed);
-          if (parsed.length > 0 && !activePackageId) {
+          if (forceAutoSelect && parsed.length > 0) {
             setActivePackageId(parsed[0].id);
           }
         }
@@ -246,7 +253,7 @@ export default function App() {
       await logoutUser();
       setUser(null);
       setActivePackageId(null);
-      loadLocalLibrary();
+      loadLocalLibrary(true);
     } catch (err) {
       console.error("Auth logout failure:", err);
     }
